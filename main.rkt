@@ -36,6 +36,7 @@
     (cond [(equal? 'color-lexer
                    request-symbol)
            (make-scribble-lexer #:command-char language-data)]
+          ;TODO: definitions-text-surrogate and drracket:indentation
           [else
            (default-filter-funct request-symbol default-value)]))
   (require syntax-color/scribble-lexer
