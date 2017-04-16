@@ -4,6 +4,7 @@
 @author[(author+email @elem{Philip M@superscript{c}Grath}
                       "philip@philipmcgrath.com"
                       #:obfuscate? #t)]
+@;TODO in 6.9 underscores will work
 @defmodule[@racketmodfont{_-exp}
            #:module-paths (_-exp)
            #:lang]
