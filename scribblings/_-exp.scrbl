@@ -4,10 +4,8 @@
 @author[(author+email @elem{Philip M@superscript{c}Grath}
                       "philip@philipmcgrath.com"
                       #:obfuscate? #t)]
-@;TODO in 6.9 underscores will work
-@defmodule[@racketmodfont{_-exp}
-           #:module-paths (_-exp)
-           #:lang]
+
+@defmodule[_-exp #:lang]
 
 @(require adjutor
           (for-label _-exp
@@ -15,9 +13,7 @@
                      ))
 
 @(define _-exp
-   ;@racketmodlink[_-exp @racketmodfont["_-exp"]]
-   @seclink["top" @racketmodfont["_-exp"]]
-   )
+   @racketmodname[_-exp])
 
 The @_-exp language is a metalanguage similar to
 @racket[@#,(hash-lang)] @racketmodname[at-exp], in that it adds
