@@ -31,7 +31,7 @@ working with text in which the character @litchar|{@}| appears frequently.
 
 A module using @_-exp takes the following form: 
 @(racketgrammar*
-  [module (code:line #,(hash-lang) @#,_-exp maybe-cmd-char-kw module-path
+  [module (code:line #,(hash-lang) @#,_-exp maybe-cmd-char-kw language-path
                      body ...)]
   [maybe-cmd-char-kw (code:line)
    (code:line cmd-char-keyword)]
@@ -72,3 +72,19 @@ displays the following output: @example-output
 
 It could be re-written to use @litchar|{@}| as the command character
 by using a @svar[cmd-char-keyword], like this: @(example-mod at at-kw)
+
+@(history
+  #:changed "0.1"
+  @elem{Fixed an implementation flaw that caused @_-exp to
+ incorrectly interpret @racket[language-path] as a module path,
+ which is inconsistent with @racketmodname[at-exp] and somewhat
+ defeats the purpose of a meta-language.
+ Unfortunately this is a breaking change:
+ while common cases like @(hash-lang) @_-exp @racketmodname[racket]
+ continue to work properly, the previous implementation accepted e.g.
+ @(hash-lang) @_-exp @racketmodname[web-server/lang], which
+ will now correctly cause an error.
+ (What you should write is
+ @(hash-lang) @_-exp @racketmodname[web-server],
+ but that didn't work with the previous version.)
+ })

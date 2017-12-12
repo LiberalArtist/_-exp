@@ -8,10 +8,11 @@
 (define build-deps '("scribble-lib"
                      "racket-doc"
                      "scribble-doc"
+                     "web-server-doc"
                      "adjutor"
                      ))
 (define scribblings '(("scribblings/_-exp.scrbl" ())))
 (define pkg-desc
   "A metalanguage similar to #lang at-exp, but the command character is configuable")
-(define version "0.0")
+(define version "0.1")
 (define pkg-authors '(philip))

@@ -1,144 +1,66 @@
-#lang racket/base
+#lang racket
 
-(require "current-command-char.rkt"
+(require _-exp/current-command-char
          (only-in scribble/reader make-at-readtable)
          syntax-color/scribble-lexer
          syntax/readerr
          racket/contract
+         syntax/module-reader
          )
-
-(module* reader syntax/module-reader
-  #:language read-language+cmdchar/values 
-  #:wrapper2 (make-wrapper2 #:command-char language-data)
-  #:info (make-info-proc language-data)
-  (require (submod ".."))
-  #|END module reader|#)
 
 (provide current-command-char
          command-char/c
          illegal-command-char/c
+         -read -read-syntax -get-info
          (contract-out
           [current-meta-lang-name-string
            (parameter/c string?)]
           [make-current-command-char-readtable
            (-> readtable?)]
-          [make-wrapper2
-           (->* []
-                [(-> readtable?)
-                 #:command-char char?]
-                (-> input-port?
-                    procedure?
-                    any/c
-                    any/c))]
-          [make-info-proc
-           (-> char?
-               (-> symbol? any/c (symbol? any/c . -> . any/c)
-                   any/c))]
-          [read-language+cmdchar/values
-           ;; also imperatively sets current-command-char
-           (-> input-port?
-               (values module-path?
-                       command-char/c))]
+          [cmd-char-read-spec
+           (-> input-port? (or/c bytes? #f))]
           ))
 
-;; based extensively on at-exp
+(module* reader racket/base
+  (require (submod ".."))
+  (provide (rename-out
+            [-read read]
+            [-read-syntax read-syntax]
+            [-get-info get-info])))
+          
+(define (default-read-spec in)
+  ;from syntax/module-reader
+  (let ([spec (regexp-try-match #px"^[ \t]+(.*?)(?=\\s|$)" in)])
+    (and spec (let ([s (cadr spec)])
+                (if (equal? s "") #f s)))))
 
-(define current-meta-lang-name-string
-  (make-parameter "_-exp"))
+(define (string-first-char str)
+  (string-ref str 0))
 
-(define (make-current-command-char-readtable)
-  (make-at-readtable #:datum-readtable 'dynamic
-                     #:command-readtable 'dynamic
-                     #:command-char (current-command-char)))
-
-(define ((make-wrapper2 [make-readtable
-                         make-current-command-char-readtable]
-                        #:command-char [cmd-char (current-command-char)])
-         in rd stx?)
-  (parameterize ([current-command-char cmd-char])
-    (cond [stx?
-           ((convert-read-syntax rd make-readtable) in)]
-          [else
-           ((convert-read rd make-readtable) in)])))
-
-(define ((make-info-proc cmd-char) request-symbol
-                                   default-value
-                                   default-filter-funct)
-  (case request-symbol
-    [(color-lexer)
-     (make-scribble-lexer #:command-char cmd-char)]
-    [(drracket:indentation)
-     ; just using what at-exp does
-     (dynamic-require 'scribble/private/indentation 'determine-spaces)]
-    ;definitions-text-surrogate ???
-    [else
-     (default-filter-funct request-symbol default-value)]))
-
-(define (read-language+cmdchar/values in)
-  ;; also imperatively sets current-command-char
+(define (cmd-char-read-spec in)
   (define-values (line col pos)
     (port-next-location in))
-  (define (validate cmd-char lang)
-    (cond
-      [(and (module-path? lang)
-            (not (illegal-command-char/c cmd-char)))
-       (current-command-char cmd-char)
-       (values lang
-               cmd-char)]
-      [else
-       (read-language-error #:line line
-                            #:col col
-                            #:pos pos
-                            #:in in
-                            #:inner-lang lang
-                            #:command-char cmd-char)]))
-  (let ([value (read in)])
-    (cond
-      [(keyword? value)
-       (validate (car (string->list (keyword->string value)))
-                 (read in))]
-      [else
-       (validate (current-command-char)
-                 value)])))
+  (match (default-read-spec in)
+    [(? bytes?
+        (app bytes->string/utf-8
+             (regexp #rx"^#:(.)$"
+                     (list _ (app string-first-char
+                                  cmd-char)))))
+     (validate-cmd-char cmd-char in line col pos)
+     (current-command-char cmd-char)
+     (default-read-spec in)]
+    [bs bs]))
 
-;                                                          
-;                                                          
-;                                                          
-;                                                          
-;   ;;              ;;;;                                   
-;   ;;                ;;                                   
-;   ;; ;      ;;;     ;;    ; ;;      ;;;   ;; ;;;    ;;   
-;   ;;; ;   ;;   ;    ;;    ;;  ;   ;;   ;  ;;;     ;;  ;  
-;   ;;  ;;  ;    ;    ;;    ;;  ;   ;    ;  ;;       ;     
-;   ;;  ;; ;;;;;;;;   ;;    ;;  ;; ;;;;;;;; ;;        ;;   
-;   ;;  ;;  ;         ;;    ;;  ;   ;       ;;          ;; 
-;   ;;  ;;  ;;   ;     ;    ;;  ;   ;;   ;  ;;      ;   ;  
-;   ;;  ;;    ;;;       ;;  ;;;;      ;;;   ;;       ;;;   
-;                           ;;                             
-;                           ;;                             
-;                           ;;                             
-;                                                          
 
-(define ((convert-read orig-read/maybe-stx
-                       [make-readtable make-current-command-char-readtable])
-         . args)
-  #;(->* [procedure?]
-         [(-> readtable?)]
-         procedure?)
-  ;; based on wrap-reader from at-exp
+(define ((convert-read orig-read/maybe-stx) . args)
   (parameterize
-      ([current-readtable (make-readtable)])
+      ([current-readtable (make-current-command-char-readtable)])
     (apply orig-read/maybe-stx args)))
 
 
-(define (convert-read-syntax orig-read-syntax
-                             [make-readtable
-                              make-current-command-char-readtable])
-  #;(->* [procedure?]
-         [(-> readtable?)]
-         procedure?)
+(define (convert-read-syntax orig-read-syntax)
   (define read-syntax
-    (convert-read orig-read-syntax make-readtable))
+    (convert-read orig-read-syntax))
   (λ args
     (define stx
       (apply read-syntax args))
@@ -152,33 +74,57 @@
     (syntax-property stx 'module-language new-prop)))
 
 
-(define (read-language-error #:line line
-                             #:col col
-                             #:pos pos
-                             #:in in
-                             #:inner-lang lang
-                             #:command-char [cmd-char (current-command-char)])
-  (define-values (end-line end-col end-pos)
-    (port-next-location in))
-  (raise-read-error
-   (cond
-     [(illegal-command-char/c cmd-char)
-      (string-append "Bad syntax following "
-                     (current-meta-lang-name-string)
-                     ": " (string cmd-char)
-                     " is not a legal command-char")]
-     [else
-      (string-append "Bad syntax following "
-                     (current-meta-lang-name-string)
-                     ":\n"
-                     "    expected: a language path or a command-char "
-                     "keyword followed by a language path\n"
-                     "    given: "
-                     (format "~v" lang))])
-   (object-name in)
-   line
-   col
-   pos
-   (and pos
-        end-pos
-        (- end-pos pos))))
+(define ((convert-get-info orig-get-info) key defval)
+  (define (fallback)
+    (if orig-get-info
+        (orig-get-info key defval)
+        defval))
+  (define (try-dynamic-require lib export)
+    (with-handlers ([exn:missing-module?
+                     (λ (x) (fallback))])
+      (dynamic-require lib export)))
+  (case key
+    [(color-lexer)
+     (make-scribble-lexer #:command-char (current-command-char))]
+    [(drracket:indentation)
+     (try-dynamic-require 'scribble/private/indentation 'determine-spaces)]
+    [(drracket:keystrokes)
+     (try-dynamic-require 'scribble/private/indentation 'keystrokes)]
+    [else (fallback)]))
+
+
+
+(define (make-current-command-char-readtable)
+  (make-at-readtable #:datum-readtable 'dynamic
+                     #:command-readtable 'dynamic
+                     #:command-char (current-command-char)))
+
+(define current-meta-lang-name-string
+  (make-parameter "_-exp"))
+
+(define (validate-cmd-char cmd-char in line col pos)
+  (when (illegal-command-char/c cmd-char)
+    (define-values (end-line end-col end-pos)
+      (port-next-location in))
+    (raise-read-error
+     (string-append "bad syntax following "
+                    (current-meta-lang-name-string)
+                    ";\n " (string cmd-char)
+                    " is not a legal command-char")
+     (object-name in)
+     line
+     col
+     pos
+     (and pos
+          end-pos
+          (- end-pos pos)))))
+
+(define-values (-read -read-syntax -get-info)
+  (make-meta-reader
+   '_-exp
+   "language path"
+   #:read-spec cmd-char-read-spec
+   lang-reader-module-paths
+   convert-read
+   convert-read-syntax
+   convert-get-info))
