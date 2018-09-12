@@ -1,6 +1,6 @@
 #lang info
 (define collection "_-exp")
-(define deps '("base"
+(define deps '(("base" #:version "6.12")
                "rackunit-lib"
                "at-exp-lib"
                "syntax-color-lib"
