@@ -6,8 +6,7 @@
          syntax/readerr
          racket/contract
          racket/match
-         syntax/module-reader
-         )
+         syntax/module-reader)
 
 (provide current-command-char
          command-char/c
