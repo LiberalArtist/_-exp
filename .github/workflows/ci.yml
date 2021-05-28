@@ -27,7 +27,7 @@ jobs:
         with:
           version: ${{ matrix.racket-version }}
           architecture: "x64"
-          distribution: "minimal"
+          distribution: "full"
       - name: Install Package and its Dependencies
         run: raco pkg install --auto --batch --name $RKT_PKG
       - name: Run Tests
