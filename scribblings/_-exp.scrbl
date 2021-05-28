@@ -2,15 +2,13 @@
 
 @title{@tt{_-exp}: Configurable Scribble-like Syntax}
 @author[(author+email @elem{Philip M@superscript{c}Grath}
-                      "philip@philipmcgrath.com"
-                      #:obfuscate? #t)]
+                      "philip@philipmcgrath.com")]
 
 @defmodule[_-exp #:lang]
 
 @(require adjutor
           (for-label _-exp
-                     racket/base
-                     ))
+                     racket/base))
 
 @(define _-exp
    @racketmodname[_-exp])
@@ -24,9 +22,9 @@ support for the
 to some base language.
 
 However, rather than using @litchar|{@}| as the command character,
-@_-exp alows the programmer to specify one on a per-module basis.
-The default command character @litchar{ƒ}, i.e. the result of 
-@racket[(integer->char 402)]. This is especially convienient when
+@_-exp allows the programmer to specify one on a per-module basis.
+The default command character is @litchar{ƒ}, i.e. the result of
+@racket[(integer->char 402)]. This is especially convenient when
 working with text in which the character @litchar|{@}| appears frequently.
 
 A module using @_-exp takes the following form: 
@@ -39,7 +37,7 @@ A module using @_-exp takes the following form:
 where @svar[cmd-char-keyword], if one is given, should be a keyword
 consisting of a single character (the desired command character)
 after the @litchar{#:}. For example, supplying @racket[#:ƒ]
-would be equivalent to ommiting the @svar[cmd-char-keyword].
+would be equivalent to omitting the @svar[cmd-char-keyword].
 
 @(def
    [ƒ @racketparenfont{ƒ}]
@@ -82,9 +80,9 @@ by using a @svar[cmd-char-keyword], like this: @(example-mod at at-kw)
  Unfortunately this is a breaking change:
  while common cases like @(hash-lang) @_-exp @racketmodname[racket]
  continue to work properly, the previous implementation accepted e.g.
- @(hash-lang) @_-exp @racketmodname[web-server/lang], which
+ @(hash-lang) @_-exp @racketmodfont{web-server/lang}, which
  will now correctly cause an error.
  (What you should write is
- @(hash-lang) @_-exp @racketmodname[web-server],
+ @(hash-lang) @_-exp @racketmodname[web-server #:indirect],
  but that didn't work with the previous version.)
  })
